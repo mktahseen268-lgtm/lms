@@ -14,7 +14,7 @@ router.get("/provinces", async (req, res) => {
   const existing = await prisma.pricingPlan.findMany({ where: { companyId } });
   const map = new Map(existing.map((x) => [x.province, x]));
   const data = EG_PROVINCES.map((p) => {
-    const r = map.get(p);
+    const r = map.get(p) as typeof existing[0] | undefined;
     return r
       ? { id: r.id, province: p, basePrice: r.basePrice, returnPrice: r.returnPrice, weightPrice: r.weightPrice, deliveryPrice: r.deliveryPrice, active: r.active }
       : { province: p, basePrice: 50, returnPrice: 25, weightPrice: 10, deliveryPrice: 15, active: true };
