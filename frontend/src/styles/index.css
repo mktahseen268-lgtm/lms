@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Cairo', 'Tajawal', system-ui, sans-serif;
+  }
+  body {
+    @apply text-slate-800 dark:text-slate-100 antialiased;
+  }
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-100 dark:border-slate-800;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand-800 hover:bg-brand-900 text-white;
+  }
+  .btn-secondary {
+    @apply btn bg-brand-700 hover:bg-brand-800 text-white;
+  }
+  .btn-cyan {
+    @apply btn bg-cyan-600 hover:bg-cyan-700 text-white;
+  }
+  .btn-success {
+    @apply btn bg-emerald-600 hover:bg-emerald-700 text-white;
+  }
+  .btn-danger {
+    @apply btn bg-rose-600 hover:bg-rose-700 text-white;
+  }
+  .btn-outline {
+    @apply btn border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800;
+  }
+  .input {
+    @apply w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-700/40 focus:border-brand-700;
+  }
+  .label {
+    @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5;
+  }
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .table-wrap {
+    @apply card overflow-x-auto;
+  }
+  .table {
+    @apply min-w-full divide-y divide-slate-100 dark:divide-slate-800;
+  }
+  .th {
+    @apply px-4 py-3 text-start text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap;
+  }
+  .td {
+    @apply px-4 py-3 text-sm text-slate-700 dark:text-slate-200 whitespace-nowrap;
+  }
+  .tr {
+    @apply hover:bg-slate-50 dark:hover:bg-slate-800/40;
+  }
+  .section-title {
+    @apply text-base font-bold text-slate-800 dark:text-slate-100 mb-3;
+  }
+  .toggle {
+    @apply relative inline-flex h-6 w-11 items-center rounded-full transition-colors;
+  }
+}
+
+/* RTL spacing helpers for inline-margin reads better in Arabic */
+[dir="rtl"] .scroll-shadow {
+  background:
+    linear-gradient(to left, white, transparent 30%) right/100% 100% no-repeat;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(120,120,140,.3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(120,120,140,.5); }

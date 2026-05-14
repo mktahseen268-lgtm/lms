@@ -1,0 +1,18 @@
+{
+  "name": "dalilee-logico-logistics",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dalilee Logico Logistics — Arabic-first SaaS logistics platform powered by Dalilee",
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "dev": "concurrently -n be,fe -c blue,magenta \"npm --workspace backend run dev\" \"npm --workspace frontend run dev\"",
+    "dev:fe": "npm --workspace frontend run dev",
+    "dev:be": "npm --workspace backend run dev",
+    "build": "npm --workspace backend run build && npm --workspace frontend run build",
+    "seed": "npm --workspace backend run seed",
+    "db:reset": "npm --workspace backend run db:reset"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

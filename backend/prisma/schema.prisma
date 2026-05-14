@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        Int       @id @default(autoincrement())
+  name      String
+  logo      String?
+  email     String?
+  phone     String?
+  address   String?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  users     User[]
+  clients   Client[]
+  couriers  Courier[]
+  branches  Branch[]
+  shipments Shipment[]
+  pricing   PricingPlan[]
+  network   NetworkRequest[]
+  distributors Distributor[]
+  transactions Transaction[]
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  phone      String?
+  passwordHash String
+  role       String   @default("DATA_ENTRY")
+  active     Boolean  @default(true)
+  photo      String?
+  companyId  Int?
+  company    Company? @relation(fields: [companyId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  permissions String  // JSON-encoded array
+}
+
+model Province {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  active Boolean @default(true)
+}
+
+model Client {
+  id               Int     @id @default(autoincrement())
+  companyId        Int
+  company          Company @relation(fields: [companyId], references: [id])
+  name             String
+  email            String?
+  phone            String?
+  city             String?
+  integrationCode  String?
+  active           Boolean @default(true)
+  createdAt        DateTime @default(now())
+  shipments        Shipment[]
+}
+
+model Courier {
+  id         Int      @id @default(autoincrement())
+  companyId  Int
+  company    Company  @relation(fields: [companyId], references: [id])
+  name       String
+  phone      String
+  workType   String?
+  photo      String?
+  passwordHash String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  provinces  CourierProvince[]
+  diaries    CourierDiary[]
+  shipments  Shipment[]
+}
+
+model CourierProvince {
+  id             Int     @id @default(autoincrement())
+  courierId      Int
+  courier        Courier @relation(fields: [courierId], references: [id])
+  province       String
+  commissionType String  @default("fixed")
+  commissionValue Float  @default(0)
+}
+
+model CourierDiary {
+  id        Int      @id @default(autoincrement())
+  courierId Int
+  courier   Courier  @relation(fields: [courierId], references: [id])
+  openedAt  DateTime @default(now())
+  closedAt  DateTime?
+  status    String   @default("open")
+}
+
+model Branch {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  address   String?
+  active    Boolean  @default(true)
+  shipments Shipment[]
+}
+
+model Shipment {
+  id           Int       @id @default(autoincrement())
+  number       String    @unique
+  companyId    Int
+  company      Company   @relation(fields: [companyId], references: [id])
+  clientId     Int?
+  client       Client?   @relation(fields: [clientId], references: [id])
+  courierId    Int?
+  courier      Courier?  @relation(fields: [courierId], references: [id])
+  branchId     Int?
+  branch       Branch?   @relation(fields: [branchId], references: [id])
+  type         String    @default("جديد")
+  senderName   String?
+  province     String
+  city         String?
+  customerName String
+  customerPhone String?
+  customerPhoneAlt String?
+  customerAddress String?
+  status       String    @default("فى انتظار التنفيذ")
+  cod          Float     @default(0)
+  prepaid      Boolean   @default(false)
+  barcode      String?
+  notes        String?
+  allowOpen    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  products     ShipmentProduct[]
+  statuses     ShipmentStatus[]
+}
+
+model ShipmentProduct {
+  id         Int      @id @default(autoincrement())
+  shipmentId Int
+  shipment   Shipment @relation(fields: [shipmentId], references: [id])
+  name       String
+  qty        Int      @default(1)
+  weight     Float    @default(0)
+  fragile    Boolean  @default(false)
+}
+
+model ShipmentStatus {
+  id         Int      @id @default(autoincrement())
+  shipmentId Int
+  shipment   Shipment @relation(fields: [shipmentId], references: [id])
+  status     String
+  notes      String?
+  createdBy  Int?
+  createdAt  DateTime @default(now())
+}
+
+model PricingPlan {
+  id            Int     @id @default(autoincrement())
+  companyId     Int
+  company       Company @relation(fields: [companyId], references: [id])
+  province      String
+  basePrice     Float   @default(0)
+  returnPrice   Float   @default(0)
+  weightPrice   Float   @default(0)
+  deliveryPrice Float   @default(0)
+  active        Boolean @default(true)
+  @@unique([companyId, province])
+}
+
+model Transaction {
+  id            Int      @id @default(autoincrement())
+  companyId     Int
+  company       Company  @relation(fields: [companyId], references: [id])
+  shipmentNumber String?
+  amount        Float
+  type          String   // cod, commission, payout
+  paymentStatus String   @default("pending")
+  forEntity     String?
+  fromEntity    String?
+  note          String?
+  createdAt     DateTime @default(now())
+}
+
+model NetworkRequest {
+  id             Int     @id @default(autoincrement())
+  companyId      Int
+  company        Company @relation(fields: [companyId], references: [id])
+  province       String
+  price          Float   @default(0)
+  replacePrice   Float   @default(0)
+  returnPrice    Float   @default(0)
+  costReturn     Float   @default(0)
+  weightLimit    Float   @default(0)
+  extraWeightPrice Float @default(0)
+  status         String  @default("pending")
+  createdAt      DateTime @default(now())
+}
+
+model Distributor {
+  id              Int     @id @default(autoincrement())
+  companyId       Int
+  company         Company @relation(fields: [companyId], references: [id])
+  partnerCompany  String
+  provinces       String  // JSON array
+  status          String  @default("pending")
+  createdAt       DateTime @default(now())
+}
+
+model MarketplaceProduct {
+  id          Int     @id @default(autoincrement())
+  name        String
+  price       Float
+  description String?
+  image       String?
+  active      Boolean @default(true)
+}
+
+model MarketplaceOrder {
+  id        Int      @id @default(autoincrement())
+  clientId  Int?
+  status    String   @default("pending")
+  total     Float    @default(0)
+  itemsJson String   @default("[]")
+  createdAt DateTime @default(now())
+}
