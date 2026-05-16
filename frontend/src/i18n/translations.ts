@@ -108,6 +108,36 @@ export const TRANSLATIONS = {
 
   "nav.settings": { ar: "الإعدادات العامة", en: "General settings" },
 
+  // Toast / generic
+  "toast.saved": { ar: "تم الحفظ بنجاح", en: "Saved successfully" },
+  "toast.updated": { ar: "تم التحديث", en: "Updated" },
+  "toast.deleted": { ar: "تم الحذف", en: "Deleted" },
+  "toast.sent": { ar: "تم الإرسال", en: "Sent" },
+  "toast.assigned": { ar: "تم التعيين", en: "Assigned" },
+  "toast.error": { ar: "حدث خطأ", en: "An error occurred" },
+  "toast.copied": { ar: "تم النسخ", en: "Copied" },
+  "toast.invalidNumbers": { ar: "أدخل أرقام شحنات صحيحة", en: "Enter valid shipment numbers" },
+  "toast.selectCourier": { ar: "اختر مندوباً أولاً", en: "Select a courier first" },
+  "toast.selectBranch": { ar: "اختر فرعاً أولاً", en: "Select a branch first" },
+  "toast.selectAtLeastOne": { ar: "اختر شحنة واحدة على الأقل", en: "Select at least one shipment" },
+  "toast.cartItemAdded": { ar: "تمت الإضافة للسلة", en: "Added to cart" },
+  "toast.orderPlaced": { ar: "تم إرسال الطلب", en: "Order placed" },
+  "toast.profileSaved": { ar: "تم حفظ الإعدادات", en: "Settings saved" },
+
+  // Modal / Confirm
+  "modal.addClient": { ar: "إضافة عميل جديد", en: "Add new client" },
+  "modal.editClient": { ar: "تعديل العميل", en: "Edit client" },
+  "modal.addBranch": { ar: "إضافة فرع", en: "Add branch" },
+  "modal.editBranch": { ar: "تعديل الفرع", en: "Edit branch" },
+  "modal.addUser": { ar: "إضافة مستخدم", en: "Add user" },
+  "modal.editUser": { ar: "تعديل المستخدم", en: "Edit user" },
+  "modal.addRole": { ar: "إضافة دور", en: "Add role" },
+  "modal.editRole": { ar: "تعديل الدور", en: "Edit role" },
+  "modal.deleteTitle": { ar: "تأكيد الحذف", en: "Confirm delete" },
+  "modal.deleteMessage": { ar: "هل أنت متأكد من الحذف؟ لا يمكن التراجع.", en: "Are you sure? This cannot be undone." },
+  "modal.passwordLeaveBlank": { ar: "اتركها فارغة لعدم التغيير", en: "Leave blank to keep unchanged" },
+  "modal.required": { ar: "حقل مطلوب", en: "Required" },
+
   // Common buttons / actions
   "btn.add": { ar: "إضافة", en: "Add" },
   "btn.save": { ar: "حفظ", en: "Save" },

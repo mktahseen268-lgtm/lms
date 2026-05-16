@@ -1,18 +1,23 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import PageHeader from "../../components/ui/PageHeader";
 import Toggle from "../../components/ui/Toggle";
 import { ArrowLeft, ArrowRight, Upload, Check } from "lucide-react";
 import { EG_PROVINCES, EG_PROVINCES_EN } from "../../lib/statuses";
 import { api } from "../../lib/api";
 import { useT, useLanguage } from "../../i18n/LanguageContext";
+import { useToast } from "../../components/ui/Toast";
 
 type CommissionRow = { province: string; commissionType: "ratio" | "fixed"; value: number; selected: boolean };
 
 export default function AddDelegate() {
   const t = useT();
   const { lang, dir } = useLanguage();
+  const toast = useToast();
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const editId = params.get("id");
+  const isEdit = !!editId;
   const [step, setStep] = useState<1 | 2>(1);
 
   const [photo, setPhoto] = useState<File | null>(null);
@@ -21,10 +26,29 @@ export default function AddDelegate() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [active, setActive] = useState(true);
 
   const [rows, setRows] = useState<CommissionRow[]>(
     EG_PROVINCES.map((p) => ({ province: p, commissionType: "fixed", value: 25, selected: false }))
   );
+
+  useEffect(() => {
+    if (!editId) return;
+    api.get(`/couriers/${editId}`).then((r) => {
+      const c = r.data.courier;
+      setName(c.name || "");
+      setPhone(c.phone || "");
+      setWorkType(c.workType || "");
+      setActive(!!c.active);
+      const map = new Map((c.commissions || []).map((x: any) => [x.province, x]));
+      setRows(EG_PROVINCES.map((p) => {
+        const m: any = map.get(p);
+        return m
+          ? { province: p, commissionType: m.commissionType, value: m.value, selected: true }
+          : { province: p, commissionType: "fixed" as const, value: 25, selected: false };
+      }));
+    }).catch(() => {});
+  }, [editId]);
 
   const strength = (() => {
     let s = 0;
@@ -45,15 +69,18 @@ export default function AddDelegate() {
 
   async function submit() {
     const selected = rows.filter((r) => r.selected);
+    const payload: any = {
+      name, workType, phone, active,
+      commissions: selected.map(({ province, commissionType, value }) => ({ province, commissionType, value })),
+    };
+    if (password) payload.password = password;
     try {
-      await api.post("/couriers", {
-        name, workType, phone, password,
-        active: true,
-        commissions: selected.map(({ province, commissionType, value }) => ({ province, commissionType, value })),
-      });
+      if (isEdit) await api.put(`/couriers/${editId}`, payload);
+      else await api.post("/couriers", payload);
+      toast.success(t("toast.saved"));
       nav("/list-delegates");
     } catch (e: any) {
-      alert(e?.response?.data?.error || t("courier.add.saveError"));
+      toast.error(e?.response?.data?.error || t("courier.add.saveError"));
     }
   }
 
@@ -91,20 +118,24 @@ export default function AddDelegate() {
             </Field>
             <Field label={t("courier.add.phone")}><input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
             <Field label={t("courier.add.password")}>
-              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <div className="h-1 mt-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                <div className={`h-full ${strengthColor} transition-all`} style={{ width: `${(strength / 4) * 100}%` }} />
-              </div>
-              <div className="text-xs text-slate-500 mt-1">{t("courier.add.strength")}: {strengthLabel}</div>
+              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={isEdit ? t("modal.passwordLeaveBlank") : ""} />
+              {password && (
+                <>
+                  <div className="h-1 mt-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div className={`h-full ${strengthColor} transition-all`} style={{ width: `${(strength / 4) * 100}%` }} />
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">{t("courier.add.strength")}: {strengthLabel}</div>
+                </>
+              )}
             </Field>
             <Field label={t("courier.add.confirm")}>
-              <input className="input" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+              <input className="input" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} disabled={!password} />
               {confirm && confirm !== password && <div className="text-xs text-rose-600 mt-1">{t("courier.add.mismatch")}</div>}
             </Field>
           </div>
           <div className="mt-5 flex justify-end">
             <button
-              disabled={!name || !phone || !password || password !== confirm}
+              disabled={!name || !phone || (!isEdit && (!password || password !== confirm)) || (!!password && password !== confirm)}
               onClick={() => setStep(2)}
               className="btn-primary"
             >

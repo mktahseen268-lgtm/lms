@@ -1,5 +1,6 @@
 import { Globe, Moon, Sun, Menu, ChevronDown, Search } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Logo from "./Logo";
 import NotificationPanel from "./NotificationPanel";
 import { useTheme } from "../../context/ThemeContext";
@@ -11,6 +12,14 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
   const { user, logout } = useAuth();
   const { lang, toggle: toggleLang, t } = useLanguage();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const nav = useNavigate();
+
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!q.trim()) return;
+    nav(`/list-shipping-all?q=${encodeURIComponent(q.trim())}`);
+  }
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between">
@@ -25,12 +34,17 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
         <Logo />
       </div>
 
-      <div className="hidden md:flex items-center gap-2 flex-1 max-w-md mx-6">
+      <form onSubmit={submitSearch} className="hidden md:flex items-center gap-2 flex-1 max-w-md mx-6">
         <div className="relative w-full">
           <Search className="absolute top-1/2 -translate-y-1/2 text-slate-400 start-3" size={16} />
-          <input placeholder={t("top.search")} className="input ps-9" />
+          <input
+            placeholder={t("top.search")}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="input ps-9"
+          />
         </div>
-      </div>
+      </form>
 
       <div className="flex items-center gap-1">
         <NotificationPanel />

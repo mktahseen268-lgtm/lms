@@ -1,20 +1,51 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageHeader from "../components/ui/PageHeader";
 import Toggle from "../components/ui/Toggle";
 import { Save } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
 import { useT } from "../i18n/LanguageContext";
+import { api } from "../lib/api";
+import { useToast } from "../components/ui/Toast";
 
 export default function ProfileEdit() {
   const t = useT();
-  const { user } = useAuth();
-  const [name, setName] = useState(user?.company?.name || "");
-  const [email, setEmail] = useState(user?.email || "");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [integrationToken, setIntegrationToken] = useState("");
+  const toast = useToast();
+  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", integrationToken: "" });
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get("/profile").then((r) => {
+      const c = r.data.company;
+      setForm({
+        name: c?.name || "",
+        email: c?.email || "",
+        phone: c?.phone || "",
+        address: c?.address || "",
+        integrationToken: localStorage.getItem("integrationToken") || "",
+      });
+      setEmailAlerts(localStorage.getItem("emailAlerts") !== "false");
+      setSmsAlerts(localStorage.getItem("smsAlerts") === "true");
+    }).finally(() => setLoading(false));
+  }, []);
+
+  async function save() {
+    setBusy(true);
+    try {
+      await api.put("/profile", {
+        name: form.name, email: form.email, phone: form.phone, address: form.address,
+      });
+      localStorage.setItem("integrationToken", form.integrationToken);
+      localStorage.setItem("emailAlerts", String(emailAlerts));
+      localStorage.setItem("smsAlerts", String(smsAlerts));
+      toast.success(t("toast.profileSaved"));
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || t("toast.error"));
+    } finally { setBusy(false); }
+  }
+
+  if (loading) return <div className="card p-10 text-center text-slate-500">{t("dash.loading")}</div>;
 
   return (
     <>
@@ -23,15 +54,15 @@ export default function ProfileEdit() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 max-w-5xl">
         <Section title={t("profile.sec.company")} className="lg:col-span-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label={t("profile.companyName")}><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
-            <Field label={t("profile.email")}><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
-            <Field label={t("profile.phone")}><input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
-            <Field label={t("profile.address")} className="md:col-span-2"><textarea className="input min-h-[80px]" value={address} onChange={(e) => setAddress(e.target.value)} /></Field>
+            <Field label={t("profile.companyName")}><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+            <Field label={t("profile.email")}><input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+            <Field label={t("profile.phone")}><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
+            <Field label={t("profile.address")} className="md:col-span-2"><textarea className="input min-h-[80px]" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
           </div>
         </Section>
 
         <Section title={t("profile.sec.integration")}>
-          <Field label={t("profile.apiToken")}><input className="input font-mono" value={integrationToken} onChange={(e) => setIntegrationToken(e.target.value)} /></Field>
+          <Field label={t("profile.apiToken")}><input className="input font-mono" value={form.integrationToken} onChange={(e) => setForm({ ...form, integrationToken: e.target.value })} /></Field>
           <p className="text-xs text-slate-500 mt-2">{t("profile.apiHint")}</p>
         </Section>
 
@@ -44,7 +75,7 @@ export default function ProfileEdit() {
       </div>
 
       <div className="mt-5 flex justify-end max-w-5xl">
-        <button className="btn-primary"><Save size={16} /> {t("btn.saveChanges")}</button>
+        <button disabled={busy} onClick={save} className="btn-primary"><Save size={16} /> {busy ? "..." : t("btn.saveChanges")}</button>
       </div>
     </>
   );

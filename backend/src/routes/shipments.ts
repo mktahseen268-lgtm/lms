@@ -117,4 +117,81 @@ router.post("/check", async (req, res) => {
   res.json({ found, missing: numbers.filter((n) => !set.has(n)) });
 });
 
+// Bulk status / courier / cancel
+router.post("/bulk", async (req, res) => {
+  const companyId = req.user!.companyId!;
+  const { action, ids, status, courierId } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: "لا توجد شحنات محددة" });
+  const idsNum = ids.map(Number).filter((n) => !Number.isNaN(n));
+  const where = { id: { in: idsNum }, companyId };
+
+  if (action === "status" && status) {
+    await prisma.shipment.updateMany({ where, data: { status } });
+    await prisma.shipmentStatus.createMany({
+      data: idsNum.map((id) => ({ shipmentId: id, status, createdBy: req.user!.id })),
+    });
+    return res.json({ ok: true, count: idsNum.length });
+  }
+  if (action === "assignCourier" && courierId) {
+    await prisma.shipment.updateMany({ where, data: { courierId: Number(courierId), status: "تحت تسليم العميل" } });
+    return res.json({ ok: true, count: idsNum.length });
+  }
+  if (action === "cancel") {
+    await prisma.shipment.updateMany({ where, data: { status: "ملغيه" } });
+    return res.json({ ok: true, count: idsNum.length });
+  }
+  return res.status(400).json({ error: "إجراء غير معروف" });
+});
+
+router.get("/:id", async (req, res) => {
+  const companyId = req.user!.companyId!;
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) return res.status(404).json({ error: "غير موجود" });
+  const s = await prisma.shipment.findFirst({
+    where: { id, companyId },
+    include: {
+      client: { select: { id: true, name: true } },
+      courier: { select: { id: true, name: true, phone: true } },
+      branch: { select: { id: true, name: true } },
+      products: true,
+      statuses: { orderBy: { createdAt: "asc" } },
+    },
+  });
+  if (!s) return res.status(404).json({ error: "غير موجود" });
+  res.json({ shipment: s });
+});
+
+router.put("/:id", async (req, res) => {
+  const companyId = req.user!.companyId!;
+  const id = Number(req.params.id);
+  const existing = await prisma.shipment.findFirst({ where: { id, companyId } });
+  if (!existing) return res.status(404).json({ error: "غير موجود" });
+  const { status, courierId, cod, customerName, customerPhone, customerAddress, notes } = req.body || {};
+  const data: any = {
+    ...(status !== undefined && { status }),
+    ...(courierId !== undefined && { courierId: courierId ? Number(courierId) : null }),
+    ...(cod !== undefined && { cod: Number(cod) }),
+    ...(customerName !== undefined && { customerName }),
+    ...(customerPhone !== undefined && { customerPhone }),
+    ...(customerAddress !== undefined && { customerAddress }),
+    ...(notes !== undefined && { notes }),
+  };
+  const updated = await prisma.shipment.update({ where: { id }, data });
+  if (status && status !== existing.status) {
+    await prisma.shipmentStatus.create({ data: { shipmentId: id, status, createdBy: req.user!.id } });
+  }
+  res.json({ shipment: updated });
+});
+
+router.delete("/:id", async (req, res) => {
+  const companyId = req.user!.companyId!;
+  const id = Number(req.params.id);
+  const existing = await prisma.shipment.findFirst({ where: { id, companyId } });
+  if (!existing) return res.status(404).json({ error: "غير موجود" });
+  await prisma.shipmentStatus.deleteMany({ where: { shipmentId: id } });
+  await prisma.shipmentProduct.deleteMany({ where: { shipmentId: id } });
+  await prisma.shipment.delete({ where: { id } });
+  res.json({ ok: true });
+});
+
 export default router;

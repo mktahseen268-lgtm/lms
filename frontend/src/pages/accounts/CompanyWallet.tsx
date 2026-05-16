@@ -5,13 +5,26 @@ import { FileSpreadsheet, FileDown, FileText } from "lucide-react";
 import { api } from "../../lib/api";
 import { currency, formatDate } from "../../lib/format";
 import { useT } from "../../i18n/LanguageContext";
+import { useToast } from "../../components/ui/Toast";
 
 export default function CompanyWallet() {
   const t = useT();
+  const toast = useToast();
   const [tab, setTab] = useState<"ops" | "invoices">("ops");
   const [data, setData] = useState<any>(null);
   const [rows, setRows] = useState<any[]>([]);
   const [filters, setFilters] = useState({ search: "", type: "", from: "", to: "" });
+
+  function exportCsv(items: any[], filename: string) {
+    if (!items.length) { toast.error(t("wallet.empty")); return; }
+    const headers = Object.keys(items[0]);
+    const csv = [headers.join(","), ...items.map((r) => headers.map((h) => `"${String(r[h] ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    a.click(); URL.revokeObjectURL(url);
+  }
 
   function load() {
     api.get("/accounts/company-wallet", { params: filters }).then((r) => {
@@ -30,9 +43,9 @@ export default function CompanyWallet() {
         subtitle={t("wallet.subtitle")}
         actions={
           <>
-            <button className="btn-success"><FileSpreadsheet size={16} /> {t("wallet.exportOps")}</button>
-            <button className="btn-outline"><FileDown size={16} /> {t("wallet.exportDues")}</button>
-            <button className="btn-primary"><FileText size={16} /> {t("wallet.issueInvoice")}</button>
+            <button onClick={() => exportCsv(rows, `wallet-ops-${Date.now()}.csv`)} className="btn-success"><FileSpreadsheet size={16} /> {t("wallet.exportOps")}</button>
+            <button onClick={() => exportCsv([summary], `wallet-summary-${Date.now()}.csv`)} className="btn-outline"><FileDown size={16} /> {t("wallet.exportDues")}</button>
+            <button onClick={() => toast.info(t("wallet.issueInvoice"))} className="btn-primary"><FileText size={16} /> {t("wallet.issueInvoice")}</button>
           </>
         }
       />
