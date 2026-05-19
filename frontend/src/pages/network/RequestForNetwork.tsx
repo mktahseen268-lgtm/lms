@@ -3,6 +3,8 @@ import PageHeader from "../../components/ui/PageHeader";
 import { EG_PROVINCES, EG_PROVINCES_EN } from "../../lib/statuses";
 import { Send, Trash2 } from "lucide-react";
 import { useT, useLanguage } from "../../i18n/LanguageContext";
+import { api } from "../../lib/api";
+import { useToast } from "../../components/ui/Toast";
 
 type Row = {
   province: string; enabled: boolean;
@@ -13,13 +15,29 @@ type Row = {
 export default function RequestForNetwork() {
   const t = useT();
   const { lang } = useLanguage();
+  const toast = useToast();
   const [rows, setRows] = useState<Row[]>(
     EG_PROVINCES.map((p) => ({ province: p, enabled: false, price: 50, replacePrice: 35, returnPrice: 25, costReturn: 0, weightLimit: 5, extraWeightPrice: 10 }))
   );
   const [agree, setAgree] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   function upd(i: number, p: Partial<Row>) { setRows((arr) => arr.map((r, idx) => (idx === i ? { ...r, ...p } : r))); }
+  function removeRow(i: number) { setRows((arr) => arr.map((r, idx) => idx === i ? { ...r, enabled: false } : r)); }
   const provinceLabels = lang === "ar" ? EG_PROVINCES : EG_PROVINCES_EN;
+
+  async function send() {
+    const enabled = rows.filter((r) => r.enabled);
+    if (!enabled.length) return toast.error(t("toast.error"));
+    setBusy(true);
+    try {
+      await api.post("/network/join-request", { rows: enabled });
+      toast.success(t("toast.sent"));
+      setRows((arr) => arr.map((r) => ({ ...r, enabled: false })));
+      setAgree(false);
+    } catch (e: any) { toast.error(e?.response?.data?.error || t("toast.error")); }
+    finally { setBusy(false); }
+  }
 
   return (
     <>
@@ -54,7 +72,7 @@ export default function RequestForNetwork() {
                 <td className="td"><input type="number" className="input !w-20" value={r.costReturn} onChange={(e) => upd(i, { costReturn: Number(e.target.value) })} /></td>
                 <td className="td"><input type="number" className="input !w-20" value={r.weightLimit} onChange={(e) => upd(i, { weightLimit: Number(e.target.value) })} /></td>
                 <td className="td"><input type="number" className="input !w-20" value={r.extraWeightPrice} onChange={(e) => upd(i, { extraWeightPrice: Number(e.target.value) })} /></td>
-                <td className="td"><button className="text-rose-600 p-1"><Trash2 size={16} /></button></td>
+                <td className="td"><button onClick={() => removeRow(i)} className="text-rose-600 p-1" title={t("btn.delete")}><Trash2 size={16} /></button></td>
               </tr>
             ))}
           </tbody>
@@ -66,7 +84,7 @@ export default function RequestForNetwork() {
           <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
           {t("netReq.agree")}
         </label>
-        <button disabled={!agree} className="btn-primary"><Send size={16} /> {t("netReq.send")}</button>
+        <button onClick={send} disabled={busy || !agree} className="btn-primary"><Send size={16} /> {busy ? "..." : t("netReq.send")}</button>
       </div>
     </>
   );

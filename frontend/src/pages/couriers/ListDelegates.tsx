@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { PlusCircle, Search } from "lucide-react";
+import { PlusCircle, Search, Trash2 } from "lucide-react";
 import PageHeader from "../../components/ui/PageHeader";
 import EmptyState from "../../components/ui/EmptyState";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { api } from "../../lib/api";
 import { shortDate } from "../../lib/format";
 import { useT, useLanguage } from "../../i18n/LanguageContext";
 import { localizeProvince } from "../../lib/statuses";
+import { useToast } from "../../components/ui/Toast";
 
 type Courier = {
   id: number;
@@ -21,14 +23,24 @@ type Courier = {
 export default function ListDelegates() {
   const t = useT();
   const { lang } = useLanguage();
+  const toast = useToast();
   const [rows, setRows] = useState<Courier[]>([]);
   const [search, setSearch] = useState("");
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    api.get("/couriers").then((r) => setRows(r.data.data || []));
-  }, []);
+  function load() { api.get("/couriers").then((r) => setRows(r.data.data || [])); }
+  useEffect(load, []);
 
   const filtered = rows.filter((r) => !search || r.name.includes(search) || r.phone.includes(search));
+
+  async function confirmDelete() {
+    if (deleteId == null) return;
+    setDeleting(true);
+    try { await api.delete(`/couriers/${deleteId}`); toast.success(t("toast.deleted")); setDeleteId(null); load(); }
+    catch (e: any) { toast.error(e?.response?.data?.error || t("toast.error")); }
+    finally { setDeleting(false); }
+  }
 
   return (
     <>
@@ -82,7 +94,9 @@ export default function ListDelegates() {
                   <td className="td font-mono">{c.phone}</td>
                   <td className="td">{shortDate(c.createdAt)}</td>
                   <td className="td">
-                    <button className="text-brand-700 hover:underline text-sm">{t("btn.edit")}</button>
+                    <Link to={`/add-delegates?id=${c.id}`} className="text-brand-700 hover:underline text-sm">{t("btn.edit")}</Link>
+                    <span className="mx-1 text-slate-300">|</span>
+                    <button onClick={() => setDeleteId(c.id)} className="text-rose-600 hover:underline text-sm inline-flex items-center gap-1"><Trash2 size={14} /> {t("btn.delete")}</button>
                   </td>
                 </tr>
               ))}
@@ -90,6 +104,16 @@ export default function ListDelegates() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+        title={t("modal.deleteTitle")}
+        message={t("modal.deleteMessage")}
+        destructive
+        busy={deleting}
+      />
     </>
   );
 }

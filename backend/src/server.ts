@@ -19,6 +19,8 @@ import marketplace from "./routes/marketplace.js";
 import ai from "./routes/ai.js";
 import supply from "./routes/supply.js";
 import operations from "./routes/operations.js";
+import profile from "./routes/profile.js";
+import notifications from "./routes/notifications.js";
 import { requireAuth } from "./middleware/auth.js";
 
 const app = express();
@@ -44,6 +46,8 @@ app.use("/api/marketplace", requireAuth, marketplace);
 app.use("/api/ai", requireAuth, ai);
 app.use("/api/supply", requireAuth, supply);
 app.use("/api/operations", requireAuth, operations);
+app.use("/api/profile", requireAuth, profile);
+app.use("/api/notifications", requireAuth, notifications);
 
 app.use((err: any, _req: any, res: any, _next: any) => {
   console.error(err);

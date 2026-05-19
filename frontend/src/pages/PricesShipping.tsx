@@ -4,6 +4,7 @@ import Toggle from "../components/ui/Toggle";
 import { Save, Settings2, Search } from "lucide-react";
 import { api } from "../lib/api";
 import { useT, useLanguage } from "../i18n/LanguageContext";
+import { useToast } from "../components/ui/Toast";
 import { EG_PROVINCES, EG_PROVINCES_EN } from "../lib/statuses";
 
 type Row = {
@@ -19,6 +20,7 @@ type Row = {
 export default function PricesShipping() {
   const t = useT();
   const { lang } = useLanguage();
+  const toast = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [tab, setTab] = useState<"all" | "active" | "inactive">("all");
   const [search, setSearch] = useState("");
@@ -47,8 +49,12 @@ export default function PricesShipping() {
   }
 
   async function save() {
-    await api.put("/pricing/bulk-update", { rows });
-    alert(t("pricing.saved"));
+    try {
+      await api.put("/pricing/bulk-update", { rows });
+      toast.success(t("pricing.saved"));
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || t("toast.error"));
+    }
   }
 
   function applyBulk() {

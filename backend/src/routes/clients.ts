@@ -17,4 +17,33 @@ router.post("/", async (req, res) => {
   res.json({ client: c });
 });
 
+router.put("/:id", async (req, res) => {
+  const companyId = req.user!.companyId!;
+  const id = Number(req.params.id);
+  const existing = await prisma.client.findFirst({ where: { id, companyId } });
+  if (!existing) return res.status(404).json({ error: "غير موجود" });
+  const { name, email, phone, city, integrationCode, active } = req.body || {};
+  const c = await prisma.client.update({
+    where: { id },
+    data: {
+      ...(name !== undefined && { name }),
+      ...(email !== undefined && { email }),
+      ...(phone !== undefined && { phone }),
+      ...(city !== undefined && { city }),
+      ...(integrationCode !== undefined && { integrationCode }),
+      ...(active !== undefined && { active }),
+    },
+  });
+  res.json({ client: c });
+});
+
+router.delete("/:id", async (req, res) => {
+  const companyId = req.user!.companyId!;
+  const id = Number(req.params.id);
+  const existing = await prisma.client.findFirst({ where: { id, companyId } });
+  if (!existing) return res.status(404).json({ error: "غير موجود" });
+  await prisma.client.delete({ where: { id } });
+  res.json({ ok: true });
+});
+
 export default router;

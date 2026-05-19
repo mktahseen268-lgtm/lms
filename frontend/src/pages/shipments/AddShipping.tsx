@@ -6,6 +6,7 @@ import Toggle from "../../components/ui/Toggle";
 import { api } from "../../lib/api";
 import { EG_PROVINCES } from "../../lib/statuses";
 import { useT, useLanguage } from "../../i18n/LanguageContext";
+import { useToast } from "../../components/ui/Toast";
 
 type Product = { name: string; qty: number; weight: number; fragile: boolean };
 
@@ -18,6 +19,7 @@ const EN_PROVINCES = [
 export default function AddShipping() {
   const t = useT();
   const { lang } = useLanguage();
+  const toast = useToast();
   const nav = useNavigate();
   const [clients, setClients] = useState<{ id: number; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -61,9 +63,10 @@ export default function AddShipping() {
         prepaid, codAmount: Number(cod || 0),
         products, barcode, notes, allowOpen,
       });
+      toast.success(t("toast.saved"));
       nav("/list-shipping-all");
     } catch (e: any) {
-      alert(e?.response?.data?.error || t("shipments.add.saveError"));
+      toast.error(e?.response?.data?.error || t("shipments.add.saveError"));
     } finally {
       setBusy(false);
     }

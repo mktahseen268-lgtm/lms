@@ -1,24 +1,65 @@
 import { useEffect, useState } from "react";
 import PageHeader from "../../components/ui/PageHeader";
 import EmptyState from "../../components/ui/EmptyState";
-import { PlusCircle, Search, BookOpenCheck } from "lucide-react";
+import Modal from "../../components/ui/Modal";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import { PlusCircle, Search, BookOpenCheck, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDate } from "../../lib/format";
 import { useT } from "../../i18n/LanguageContext";
+import { useToast } from "../../components/ui/Toast";
 
 export default function DelegateDiaries() {
   const t = useT();
+  const toast = useToast();
   const [rows, setRows] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [couriers, setCouriers] = useState<any[]>([]);
+  const [openOpen, setOpenOpen] = useState(false);
+  const [pickedCourier, setPickedCourier] = useState<number | "">("");
+  const [busy, setBusy] = useState(false);
+  const [closeId, setCloseId] = useState<number | null>(null);
+  const [closing, setClosing] = useState(false);
 
-  useEffect(() => { api.get("/couriers/diaries").then((r) => setRows(r.data.data || [])).catch(() => {}); }, []);
+  function load() {
+    api.get("/couriers/diaries").then((r) => setRows(r.data.data || [])).catch(() => {});
+  }
+
+  useEffect(() => {
+    load();
+    api.get("/couriers").then((r) => setCouriers(r.data.data || []));
+  }, []);
+
+  async function openDiary() {
+    if (!pickedCourier) return toast.error(t("toast.selectCourier"));
+    setBusy(true);
+    try {
+      await api.post("/couriers/diaries/open", { courierId: pickedCourier });
+      toast.success(t("toast.saved"));
+      setOpenOpen(false); setPickedCourier(""); load();
+    } catch (e: any) { toast.error(e?.response?.data?.error || t("toast.error")); }
+    finally { setBusy(false); }
+  }
+
+  async function closeDiary() {
+    if (closeId == null) return;
+    setClosing(true);
+    try {
+      await api.post(`/couriers/diaries/${closeId}/close`);
+      toast.success(t("toast.updated"));
+      setCloseId(null); load();
+    } catch (e: any) { toast.error(e?.response?.data?.error || t("toast.error")); }
+    finally { setClosing(false); }
+  }
+
+  const filtered = rows.filter((r) => !search || r.courier?.name?.includes(search) || r.courier?.phone?.includes(search));
 
   return (
     <>
       <PageHeader
         title={t("diaries.title")}
         subtitle={t("diaries.subtitle")}
-        actions={<button className="btn-cyan"><PlusCircle size={16} /> {t("diaries.open")}</button>}
+        actions={<button onClick={() => setOpenOpen(true)} className="btn-cyan"><PlusCircle size={16} /> {t("diaries.open")}</button>}
       />
       <div className="card p-3 mb-4">
         <div className="relative max-w-sm">
@@ -27,8 +68,8 @@ export default function DelegateDiaries() {
         </div>
       </div>
 
-      {rows.length === 0 ? (
-        <EmptyState icon={<BookOpenCheck size={28} />} title={t("diaries.empty")} description={t("diaries.emptyDesc")} />
+      {filtered.length === 0 ? (
+        <EmptyState icon={<BookOpenCheck size={28} />} title={t("diaries.empty")} description={t("diaries.emptyDesc")} action={<button onClick={() => setOpenOpen(true)} className="btn-cyan"><PlusCircle size={16} /> {t("diaries.open")}</button>} />
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -44,7 +85,7 @@ export default function DelegateDiaries() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {rows.map((r, i) => (
+              {filtered.map((r, i) => (
                 <tr key={r.id} className="tr">
                   <td className="td">{i + 1}</td>
                   <td className="td">{r.courier?.name}</td>
@@ -52,13 +93,44 @@ export default function DelegateDiaries() {
                   <td className="td">{formatDate(r.openedAt)}</td>
                   <td className="td">{r.closedAt ? formatDate(r.closedAt) : "—"}</td>
                   <td className="td"><span className={"badge " + (r.status === "open" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-700")}>{r.status === "open" ? t("diaries.open.status") : t("diaries.closed.status")}</span></td>
-                  <td className="td"><button className="text-brand-700 hover:underline text-sm">{t("btn.view")}</button></td>
+                  <td className="td">
+                    {r.status === "open" && (
+                      <button onClick={() => setCloseId(r.id)} className="text-rose-600 hover:underline text-sm inline-flex items-center gap-1"><X size={14} /> {t("diaries.closed.status")}</button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <Modal
+        open={openOpen}
+        onClose={() => setOpenOpen(false)}
+        title={t("diaries.open")}
+        footer={
+          <>
+            <button onClick={() => setOpenOpen(false)} className="btn-outline">{t("btn.cancel")}</button>
+            <button disabled={busy || !pickedCourier} onClick={openDiary} className="btn-primary">{busy ? "..." : t("btn.confirm")}</button>
+          </>
+        }
+      >
+        <label className="label">{t("ops.chooseCourier")}</label>
+        <select className="input" value={pickedCourier} onChange={(e) => setPickedCourier(Number(e.target.value) || "")}>
+          <option value="">{t("ops.chooseCourier")}</option>
+          {couriers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </Modal>
+
+      <ConfirmDialog
+        open={closeId !== null}
+        onCancel={() => setCloseId(null)}
+        onConfirm={closeDiary}
+        title={t("diaries.closed.status")}
+        message={t("modal.deleteMessage")}
+        busy={closing}
+      />
     </>
   );
 }
